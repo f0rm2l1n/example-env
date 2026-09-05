@@ -1,0 +1,17 @@
+# Local slot materialization
+slots/slots.jsonl
+
+# Runtime outputs
+artifacts/
+
+# Generated SSH material embedded only in upload bundles
+environment_bundle/ssh/
+
+# Local transaction helpers
+/DIFF_FILE
+/MODIFIED_FILE
+/VERIFICATION.txt
+/ROLLBACK.sh
+
+# Python cache
+__pycache__/

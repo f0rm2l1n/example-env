@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Zhongjing Security Team
+# SPDX-License-Identifier: LicenseRef-Zhongjing-Security-Proprietary
+set -euo pipefail
+source /usr/local/lib/zhongjing-sec/slot-common.sh
+[ "${1:-}" = --slot ] || { echo "usage: zhongjing-sec-cleanup --slot SLOT_ID" >&2; exit 2; }
+zhongjing_sec_load_slot "${2:-}"
+test -s "$rootfs_template" || { echo "missing rootfs template: $rootfs_template" >&2; exit 2; }
+mkdir -p "$slot_dir" "$run_dir" "$health_dir" "$evidence_dir"
+pkill -TERM -f -- "qemu-system-aarch64.*$rootfs_cpio" 2>/dev/null || true
+for _attempt in $(seq 1 50); do
+  pgrep -f -- "qemu-system-aarch64.*$rootfs_cpio" >/dev/null 2>&1 || break
+  sleep 0.1
+done
+pkill -KILL -f -- "qemu-system-aarch64.*$rootfs_cpio" 2>/dev/null || true
+rm -f "$pid_file"
+(cd "$shared_dir" && grep '  runtime/rootfs.cpio$' ASSET_SHA256SUMS | sha256sum --check --strict - >/dev/null)
+rootfs_tmp="$(mktemp "$slot_dir/.rootfs.cpio.reset.XXXXXX")"
+trap 'rm -f "$rootfs_tmp"' EXIT
+cp --reflink=auto "$rootfs_template" "$rootfs_tmp"
+cmp "$rootfs_template" "$rootfs_tmp"
+mv -f "$rootfs_tmp" "$rootfs_cpio"
+trap - EXIT
+cmp "$rootfs_template" "$rootfs_cpio"
+echo "cleanup=ok"
+echo "slot_id=$slot_id"
+echo "rootfs_restored=yes"

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Zhongjing Security Team
+# SPDX-License-Identifier: LicenseRef-Zhongjing-Security-Proprietary
+set -euo pipefail
+source /usr/local/lib/zhongjing-sec/slot-common.sh
+[ "${1:-}" = --slot ] || { echo "usage: zhongjing-sec-verify --slot SLOT_ID" >&2; exit 2; }
+zhongjing_sec_load_slot "${2:-}"
+zhongjing_sec_require_slot_files
+for command_name in qemu-system-aarch64 timeout tee flock sha256sum; do
+  command -v "$command_name" >/dev/null || { echo "missing command: $command_name" >&2; exit 2; }
+done
+(cd "$shared_dir" && sha256sum --check --strict ASSET_SHA256SUMS)
+test -x "$shared_dir/payloads/poc"
+echo "remote-verification=ok"
+echo "slot_id=$slot_id"

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Zhongjing Security Team
+# SPDX-License-Identifier: LicenseRef-Zhongjing-Security-Proprietary
+set -euo pipefail
+source /usr/local/lib/zhongjing-sec/slot-common.sh
+[ "${1:-}" = --slot ] || { echo "usage: zhongjing-sec-run --slot SLOT_ID" >&2; exit 2; }
+zhongjing_sec_load_slot "${2:-}"
+zhongjing_sec_require_slot_files
+mkdir -p "$run_dir"
+exec 9>"$lock_file"
+flock -n 9 || { echo "slot already running: $slot_id" >&2; exit 3; }
+: > "$serial_log"
+printf '%s\n' "slot_id=$slot_id" "qemu_kernel_image=$kernel_image" "qemu_rootfs_cpio=$rootfs_cpio" "qemu_serial_log=$serial_log"
+printf '%s\n' "$$" > "$pid_file"
+trap 'rm -f "$pid_file"' EXIT
+set +e
+timeout --foreground "${QEMU_TIMEOUT_SECONDS:-120}" \
+  qemu-system-aarch64 \
+    -machine virt -cpu max -m "${QEMU_MEMORY_MB:-1024}" \
+    -nodefaults \
+    -kernel "$kernel_image" -initrd "$rootfs_cpio" \
+    -append "${ZHONGJING_SEC_KERNEL_APPEND:-console=ttyAMA0 quiet nokaslr panic=1 selinux=0}" \
+    -nographic -serial stdio -monitor none -no-reboot \
+  2>&1 | tee "$serial_log"
+run_exit="${PIPESTATUS[0]}"
+set -e
+printf '%s\n' "$run_exit" > "$run_dir/run.exit"
+exit "$run_exit"

@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Zhongjing Security Team
+# SPDX-License-Identifier: LicenseRef-Zhongjing-Security-Proprietary
+services:
+  ssh-host:
+    build:
+      context: ./docker
+      args:
+        DEBIAN_BASE_IMAGE: "${DEBIAN_BASE_IMAGE:-debian:bookworm-slim}"
+        DEBIAN_APT_MIRROR: "${DEBIAN_APT_MIRROR:-}"
+        DEBIAN_SECURITY_APT_MIRROR: "${DEBIAN_SECURITY_APT_MIRROR:-}"
+    container_name: zhongjing-sec-external-linux-host
+    hostname: external-linux-host
+    environment:
+      ZHONGJING_SEC_UID: "${ZHONGJING_SEC_UID:-1000}"
+      ZHONGJING_SEC_GID: "${ZHONGJING_SEC_GID:-1000}"
+    ports:
+      - "${ZHONGJING_SEC_BIND_HOST:-0.0.0.0}:${ZHONGJING_SEC_PUBLIC_PORT:-2222}:22"
+    volumes:
+      - ./artifacts/shared:/srv/zhongjing-sec/shared:ro
+      - ./artifacts/slots:/srv/zhongjing-sec/slots
+      - ./artifacts/ssh/authorized_keys:/run/zhongjing-sec/input_authorized_keys:ro
+    restart: unless-stopped

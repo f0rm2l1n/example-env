@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Zhongjing Security Team
+# SPDX-License-Identifier: LicenseRef-Zhongjing-Security-Proprietary
+schema_version: zhongjing-sec.external_environment_bundle.v2
+name: qemu-arm64-ctf-example
+display_name: AArch64 QEMU over SSH Example
+
+documents:
+  guide:
+    - docs/ENVIRONMENT_GUIDE.md
+
+framework:
+  hooks:
+    activate_on_lease: scripts/activate-on-lease.sh
+    healthcheck_on_lease: scripts/healthcheck-on-lease.sh
+    cleanup_on_release: scripts/cleanup-slot.sh
+
+operator:
+  notes:
+    - One Docker container provides one SSH endpoint and hosts two independent QEMU slots.
+    - Both slots share the read-only kernel and pristine rootfs template.
+    - Each slot owns a working rootfs, serial log, healthcheck output, and evidence directory.
+    - Every lifecycle hook reaches the selected slot through its pinned SSH connection.
+    - Cleanup affects only the selected slot and atomically restores its working rootfs.
