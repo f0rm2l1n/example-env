@@ -15,7 +15,8 @@ serial_log="$(jq -r .logs.serial_log "$selected")"
 mkdir -p "$artifact_root"
 "$repo_root/environment_bundle/scripts/ssh-copy-from.sh" "$serial_log" "$artifact_root/qemu-serial.log"
 grep -q 'module inserted' "$artifact_root/qemu-serial.log" && module_inserted=yes || module_inserted=no
+grep -q 'guest ready' "$artifact_root/qemu-serial.log" && guest_ready=yes || guest_ready=no
 grep -q 'BUG: KASAN:' "$artifact_root/qemu-serial.log" && kasan=yes || kasan=no
-printf 'slot_id=%s\nmodule_inserted=%s\nkasan=%s\ncollection=ok\n' "$(jq -r .slot_id "$selected")" "$module_inserted" "$kasan" > "$artifact_root/evidence-status.txt"
+printf 'slot_id=%s\nmodule_inserted=%s\nguest_ready=%s\nkasan=%s\ncollection=ok\n' "$(jq -r .slot_id "$selected")" "$module_inserted" "$guest_ready" "$kasan" > "$artifact_root/evidence-status.txt"
 (cd "$artifact_root" && find . -maxdepth 1 -type f ! -name evidence-index.txt -print0 | sort -z | xargs -0 sha256sum) > "$artifact_root/evidence-index.txt"
 cat "$artifact_root/evidence-status.txt"

@@ -13,12 +13,45 @@ flock -n 9 || { echo "slot already running: $slot_id" >&2; exit 3; }
 printf '%s\n' "slot_id=$slot_id" "qemu_kernel_image=$kernel_image" "qemu_rootfs_cpio=$rootfs_cpio" "qemu_serial_log=$serial_log"
 printf '%s\n' "$$" > "$pid_file"
 trap 'rm -f "$pid_file"' EXIT
+
+# Per-slot poc injection: if the agent placed a binary in poc_in (any filename),
+# append it as /poc to a copy of the working rootfs via cpio concatenation.
+qemu_initrd="$rootfs_cpio"
+poc_guest=""
+if [ -d "$poc_in_dir" ]; then
+  poc_file="$(find "$poc_in_dir" -maxdepth 1 -type f | head -n1)"
+fi
+if [ -n "${poc_file:-}" ] && [ -s "$poc_file" ]; then
+  staged_poc="$(mktemp "$run_dir/.poc-only.XXXXXX.cpio")"
+  trap 'rm -f "$pid_file" "$staged_poc"' EXIT
+  if command -v cpio >/dev/null 2>&1 && command -v xz >/dev/null 2>&1; then
+    staging_dir="$(mktemp -d "$run_dir/.poc-staging.XXXXXX")"
+    trap 'rm -f "$pid_file" "$staged_poc"; rm -rf "$staging_dir"' EXIT
+    cp "$poc_file" "$staging_dir/poc"
+    chmod 0755 "$staging_dir/poc"
+    (cd "$staging_dir" && find . -print0 | cpio --null -o --format=newc 2>/dev/null) > "$staged_poc"
+    case "$rootfs_cpio" in
+      *.xz) base_cpio="${rootfs_cpio%.xz}" ;;
+      *) base_cpio="$rootfs_cpio" ;;
+    esac
+    if [ -f "$base_cpio" ]; then
+      qemu_initrd="$(mktemp "$run_dir/.boot.XXXXXX.cpio")"
+      cat "$base_cpio" "$staged_poc" > "$qemu_initrd"
+      printf '%s\n' "poc_injected=/poc"
+    else
+      echo "poc injection skipped: no plain cpio at $base_cpio" >&2
+    fi
+  else
+    echo "poc injection skipped: missing cpio or xz in container" >&2
+  fi
+fi
+
 set +e
-timeout --foreground "${QEMU_TIMEOUT_SECONDS:-120}" \
+timeout --foreground "${QEMU_TIMEOUT_SECONDS:-600}" \
   qemu-system-aarch64 \
     -machine virt -cpu max -m "${QEMU_MEMORY_MB:-1024}" \
     -nodefaults \
-    -kernel "$kernel_image" -initrd "$rootfs_cpio" \
+    -kernel "$kernel_image" -initrd "$qemu_initrd" \
     -append "${ZHONGJING_SEC_KERNEL_APPEND:-console=ttyAMA0 quiet nokaslr panic=1 selinux=0}" \
     -nographic -serial stdio -monitor none -no-reboot \
   2>&1 | tee "$serial_log"

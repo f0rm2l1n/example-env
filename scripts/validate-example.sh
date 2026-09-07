@@ -15,8 +15,8 @@ required_paths=(
   compose.yaml docker/Dockerfile docker/entrypoint.sh docker/remote/slot-common.sh scripts/check-deps.sh
   docker/remote/zhongjing-sec-verify docker/remote/zhongjing-sec-run docker/remote/zhongjing-sec-healthcheck docker/remote/zhongjing-sec-cleanup
   environment_bundle/bundle.yaml environment_bundle/docs/ENVIRONMENT_GUIDE.md
-  environment_bundle/handbooks/inspect-slot/SKILL.md environment_bundle/handbooks/run-qemu-poc/SKILL.md environment_bundle/handbooks/collect-evidence/SKILL.md
-  environment_bundle/scripts/ssh-common.sh environment_bundle/scripts/ssh-exec.sh environment_bundle/scripts/ssh-copy-from.sh
+  environment_bundle/handbooks/inspect-slot/SKILL.md environment_bundle/handbooks/linux-run-poc/SKILL.md environment_bundle/handbooks/collect-evidence/SKILL.md
+  environment_bundle/scripts/ssh-common.sh environment_bundle/scripts/ssh-exec.sh environment_bundle/scripts/ssh-copy-from.sh environment_bundle/scripts/ssh-copy-to.sh
   environment_bundle/scripts/activate-on-lease.sh environment_bundle/scripts/healthcheck-on-lease.sh environment_bundle/scripts/cleanup-slot.sh
 )
 for path in "${required_paths[@]}"; do test -f "$path" || { echo "missing required path: $path" >&2; exit 2; }; done
@@ -36,6 +36,7 @@ jq -e -s '
   ([.[].work_dir] | unique | length == 2) and
   ([.[].runtime.rootfs_cpio] | unique | length == 2) and
   ([.[].logs.serial_log] | unique | length == 2) and
+  ([.[].run.poc_in] | unique | length == 2) and
   ([.[].runtime.kernel_image] | unique == ["/srv/zhongjing-sec/shared/runtime/Image"]) and
   ([.[].runtime.rootfs_template] | unique == ["/srv/zhongjing-sec/shared/runtime/rootfs.cpio"]) and
   all(.[]; . as $s | $s.transport.kind == "ssh" and ($s.runtime.rootfs_cpio | startswith($s.work_dir + "/")))
@@ -97,7 +98,6 @@ path_patterns = [
     re.compile(r"[\s'\"`(][A-Za-z]:[\\/]"),
 ]
 asset_paths = [
-    root / "payloads" / "poc",
     root / "payloads" / "vuln_misc.ko",
 ]
 compressed_assets = [

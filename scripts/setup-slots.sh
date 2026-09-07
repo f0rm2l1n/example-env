@@ -37,11 +37,9 @@ xz -dc "$repo_root/runtime/rootfs.cpio.xz" > "$shared_runtime_dir/rootfs.cpio.tm
 mv -f "$shared_runtime_dir/Image.tmp" "$shared_runtime_dir/Image"
 mv -f "$shared_runtime_dir/rootfs.cpio.tmp" "$shared_runtime_dir/rootfs.cpio"
 chmod 0644 "$shared_runtime_dir/Image" "$shared_runtime_dir/rootfs.cpio"
-cp "$repo_root/payloads/poc" "$shared_payloads_dir/poc"
 cp "$repo_root/payloads/vuln_misc.ko" "$shared_payloads_dir/vuln_misc.ko"
-chmod 0755 "$shared_payloads_dir/poc"
 chmod 0644 "$shared_payloads_dir/vuln_misc.ko"
-(cd "$shared_dir" && sha256sum runtime/Image runtime/rootfs.cpio payloads/poc payloads/vuln_misc.ko > ASSET_SHA256SUMS)
+(cd "$shared_dir" && sha256sum runtime/Image runtime/rootfs.cpio payloads/vuln_misc.ko > ASSET_SHA256SUMS)
 (cd "$shared_dir" && sha256sum --check --strict ASSET_SHA256SUMS >/dev/null)
 
 if [ ! -s "$identity_file" ]; then
@@ -55,7 +53,7 @@ chmod 0600 "$bundle_ssh_dir/id_ed25519"
 for slot_number in 1 2; do
   slot_id="qemu-arm64-ctf-$slot_number"
   slot_dir="$repo_root/artifacts/slots/$slot_id"
-  mkdir -p "$slot_dir/run" "$slot_dir/healthcheck" "$slot_dir/evidence"
+  mkdir -p "$slot_dir/run" "$slot_dir/healthcheck" "$slot_dir/evidence" "$slot_dir/poc_in"
   rootfs_tmp="$(mktemp "$slot_dir/.rootfs.cpio.setup.XXXXXX")"
   cp --reflink=auto "$shared_runtime_dir/rootfs.cpio" "$rootfs_tmp"
   cmp "$shared_runtime_dir/rootfs.cpio" "$rootfs_tmp"
@@ -111,7 +109,7 @@ for number in (1, 2):
         "work_dir": work_dir,
         "artifact_local_dir": f"artifacts/slots/{slot_id}/evidence",
         "build": {"command": f"zhongjing-sec-verify --slot {slot_id}", "output_hint": "/srv/zhongjing-sec/shared/payloads/vuln_misc.ko"},
-        "run": {"command": f"zhongjing-sec-run --slot {slot_id}", "evidence_hint": f"{work_dir}/run/qemu-serial.log"},
+        "run": {"command": f"zhongjing-sec-run --slot {slot_id}", "evidence_hint": f"{work_dir}/run/qemu-serial.log", "poc_in": f"{work_dir}/poc_in"},
         "healthcheck": {"command": f"zhongjing-sec-healthcheck --slot {slot_id}", "status_hint": f"{work_dir}/healthcheck/healthcheck-status.txt"},
         "cleanup": {"command": f"zhongjing-sec-cleanup --slot {slot_id}"},
         "logs": {"serial_log": f"{work_dir}/run/qemu-serial.log", "evidence_dir": f"{work_dir}/evidence"},
@@ -120,7 +118,7 @@ for number in (1, 2):
             "rootfs_template": "/srv/zhongjing-sec/shared/runtime/rootfs.cpio",
             "rootfs_cpio": f"{work_dir}/rootfs.cpio",
         },
-        "payloads": {"module_ko": "/srv/zhongjing-sec/shared/payloads/vuln_misc.ko", "poc": "/srv/zhongjing-sec/shared/payloads/poc"},
+        "payloads": {"module_ko": "/srv/zhongjing-sec/shared/payloads/vuln_misc.ko"},
         "container": {"name": "zhongjing-sec-external-linux-host"},
     }
     print(json.dumps(row, ensure_ascii=False, separators=(",", ":")))

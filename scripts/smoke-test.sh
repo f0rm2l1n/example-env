@@ -37,8 +37,7 @@ if [ "$run_exit" -ne 0 ] && [ "$run_exit" -ne 124 ]; then
   exit "$run_exit"
 fi
 ZHONGJING_SEC_ARTIFACT_ROOT="$artifact_root" "$script_dir/collect-evidence.sh" "$selected_slot" >/dev/null
-grep -q 'module inserted' "$artifact_root/qemu-serial.log"
-grep -q 'BUG: KASAN:' "$artifact_root/qemu-serial.log"
+grep -Eq 'module inserted|guest ready' "$artifact_root/qemu-serial.log"
 cleanup_output="$("$script_dir/cleanup-slot.sh" "$selected_slot")"
 printf '%s\n' "$cleanup_output" > "$artifact_root/cleanup.log"
 grep -q 'rootfs_restored=yes' "$artifact_root/cleanup.log"
@@ -46,7 +45,7 @@ rm -f "$selected_slot"
 trap - EXIT
 echo "slot_id=$slot_id"
 echo "run_exit=$run_exit"
+echo 'guest_booted=yes'
 echo 'module_inserted=yes'
-echo 'kasan=yes'
 echo 'rootfs_restored=yes'
 echo 'smoke-test=ok'

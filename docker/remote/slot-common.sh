@@ -12,6 +12,7 @@ zhongjing_sec_load_slot() {
   run_dir="$slot_dir/run"
   health_dir="$slot_dir/healthcheck"
   evidence_dir="$slot_dir/evidence"
+  poc_in_dir="$slot_dir/poc_in"
   serial_log="$run_dir/qemu-serial.log"
   pid_file="$run_dir/qemu.pid"
   lock_file="$run_dir/qemu.lock"

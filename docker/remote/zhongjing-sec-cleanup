@@ -6,14 +6,16 @@ source /usr/local/lib/zhongjing-sec/slot-common.sh
 [ "${1:-}" = --slot ] || { echo "usage: zhongjing-sec-cleanup --slot SLOT_ID" >&2; exit 2; }
 zhongjing_sec_load_slot "${2:-}"
 test -s "$rootfs_template" || { echo "missing rootfs template: $rootfs_template" >&2; exit 2; }
-mkdir -p "$slot_dir" "$run_dir" "$health_dir" "$evidence_dir"
-pkill -TERM -f -- "qemu-system-aarch64.*$rootfs_cpio" 2>/dev/null || true
+mkdir -p "$slot_dir" "$run_dir" "$health_dir" "$evidence_dir" "$poc_in_dir"
+pkill -TERM -f -- "qemu-system-aarch64.*$run_dir" 2>/dev/null || true
 for _attempt in $(seq 1 50); do
-  pgrep -f -- "qemu-system-aarch64.*$rootfs_cpio" >/dev/null 2>&1 || break
+  pgrep -f -- "qemu-system-aarch64.*$run_dir" >/dev/null 2>&1 || break
   sleep 0.1
 done
-pkill -KILL -f -- "qemu-system-aarch64.*$rootfs_cpio" 2>/dev/null || true
+pkill -KILL -f -- "qemu-system-aarch64.*$run_dir" 2>/dev/null || true
 rm -f "$pid_file"
+rm -f "$run_dir"/.boot.* "$run_dir"/.poc-only.* 2>/dev/null || true
+rm -rf "$run_dir"/.poc-staging.* 2>/dev/null || true
 (cd "$shared_dir" && grep '  runtime/rootfs.cpio$' ASSET_SHA256SUMS | sha256sum --check --strict - >/dev/null)
 rootfs_tmp="$(mktemp "$slot_dir/.rootfs.cpio.reset.XXXXXX")"
 trap 'rm -f "$rootfs_tmp"' EXIT

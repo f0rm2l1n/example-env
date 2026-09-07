@@ -21,7 +21,7 @@ kernel_image=$kernel_image
 rootfs_template=$rootfs_template
 rootfs_cpio=$rootfs_cpio
 module_ko=/srv/zhongjing-sec/shared/payloads/vuln_misc.ko
-poc=/srv/zhongjing-sec/shared/payloads/poc
+poc_in_dir=$poc_in_dir
 healthcheck=$healthcheck
 EOF_STATUS
 cat "$status_file"

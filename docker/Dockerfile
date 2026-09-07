@@ -23,7 +23,8 @@ RUN if [ -n "$DEBIAN_APT_MIRROR" ]; then \
     fi \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-       bash ca-certificates coreutils grep jq openssh-server procps qemu-system-arm util-linux \
+       bash ca-certificates coreutils cpio grep jq openssh-server procps qemu-system-arm util-linux \
+       xz-utils \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /srv/zhongjing-sec/home /srv/zhongjing-sec/slots \
     && useradd --home-dir /srv/zhongjing-sec/home --shell /bin/bash zhongjing-sec \

@@ -8,13 +8,14 @@
 
 ## 你在这个环境里做什么(一屏看清)
 
-目标是:让远端某个 QEMU guest 里加载的易受攻击内核模块,在运行你的 poc 时触发一次 KASAN 崩溃。一次典型会话是——
+目标是:让远端某个 QEMU guest 里加载的易受攻击内核模块,在运行你**自己写的** poc 时触发一次 KASAN 崩溃。环境**只提供环境,不提供 poc**。一次典型会话是——
 
 1. **已就绪**:平台已租用一个 slot(见 `$BRAINAFK_ENV_SLOT_JSON`),并通过 `activate_on_lease` 保证该 slot 的根文件系统是干净的。
-2. **inspect**:按 [inspect-slot](../handbooks/inspect-slot/SKILL.md) 跑 `zhongjing-sec-verify`,确认远端资产可用。
-3. **run**:按 [run-qemu-poc](../handbooks/run-qemu-poc/SKILL.md) 跑 `zhongjing-sec-run`,它会在远端**当场开一台全新的 QEMU ARM64 Linux 虚拟机**:guest 启动 → 装载有漏洞的内核模块 → 执行 rootfs 里的 poc → 触发 KASAN → 自动关机。guest 打印的一切都流进串口日志。
-4. **collect**:按 [collect-evidence](../handbooks/collect-evidence/SKILL.md) 把串口日志拉到本地,核对成功标记 `module inserted` 和 `BUG: KASAN:`。
-5. **释放**:平台 `cleanup_on_release` 会停掉该 slot 的 QEMU,恢复干净 rootfs —— 这步你不需要做,也不要自己停、导、清、释放租约。
+2. **inspect**:按 [inspect-slot](../handbooks/inspect-slot/SKILL.md) 跑 `zhongjing-sec-verify`,确认远端资产可用、模块在位。
+3. **写入 poc**:按 [linux-run-poc](../handbooks/linux-run-poc/SKILL.md) 编译一个静态 aarch64 程序,用 `ssh-copy-to.sh` 推进 slot 的 `poc_in` 目录(也可不推,见 §2)。
+4. **run**:按 [linux-run-poc](../handbooks/linux-run-poc/SKILL.md) 跑 `zhongjing-sec-run`,它会在远端**当场开一台全新的 QEMU ARM64 Linux 虚拟机**:guest 启动 → 装载有漏洞的内核模块 → 若有 `/poc` 则执行它 → 结束/超时关机。guest 打印的一切都流进串口日志。
+5. **collect**:按 [collect-evidence](../handbooks/collect-evidence/SKILL.md) 把串口日志拉到本地,核对成功标记 `module inserted` 和 `guest ready`;若你的 poc 触发崩溃,日志里会出现 `BUG: KASAN:`。
+6. **释放**:平台 `cleanup_on_release` 会停掉该 slot 的 QEMU,恢复干净 rootfs —— 这步你不需要做,也不要自己停、导、清、释放租约。
 
 ## 1. selected slot 里有什么
 
@@ -26,14 +27,15 @@
 | `workspace` | 远端主机内的根目录 `/srv/zhongjing-sec` |
 | `work_dir` | 本 slot 的独立工作目录 `/srv/zhongjing-sec/slots/<slot_id>` |
 | `runtime` | 开这台 QEMU 要用的内核镜像与 rootfs:共享只读的 `kernel_image`、`rootfs_template`,以及本 slot 的 `rootfs_cpio` |
-| `payloads` | 共享只读的 `module_ko` 与内置 `poc` |
+| `payloads` | 共享只读的 `module_ko`(有漏洞的模块) |
+| `run.poc_in` | 本 slot 的上传 poc 目录;你把 `/poc`(可选)放进这里 |
 | `logs` | 本 slot 的 `serial_log`(QEMU 串口输出)、`evidence_dir` |
 | `build` / `run` / `healthcheck` / `cleanup` | 生命周期命令约定,见下 |
 
 共享 vs 隔离:
 
 - **共享只读**(所有 slot 一致):内核镜像、干净 rootfs 模板、预编译模块,位于远端 `/srv/zhongjing-sec/shared/`。你开机的内核就是这套共享内核。
-- **按 slot 隔离**:每个 slot 自己的工作 rootfs、串口日志、evidence,都在其 `work_dir/` 下。不要碰其他 slot 的路径。
+- **按 slot 隔离**:每个 slot 自己的工作 rootfs、串口日志、evidence、上传 poc 的 `poc_in`,都在其 `work_dir/` 下。不要碰其他 slot 的路径。
 
 ## 2. handbooks 里有什么
 
@@ -42,7 +44,7 @@
 | handbook | 干什么 | 不跑会怎样 |
 | --- | --- | --- |
 | [inspect-slot](../handbooks/inspect-slot/SKILL.md) | 校验 slot、确认远端资产可用 | 直接 run 可能因缺资产失败 |
-| [run-qemu-poc](../handbooks/run-qemu-poc/SKILL.md) | 开机跑 poc、断言 KASAN | 没有运行结果 |
+| [linux-run-poc](../handbooks/linux-run-poc/SKILL.md) | 推进你的 poc(可选)、开机跑 guest | 没有运行结果 |
 | [collect-evidence](../handbooks/collect-evidence/SKILL.md) | 拉串口日志、生成证据索引 | 没有可比对的证据 |
 
 每个 runbook 都依赖 `$BRAINAFK_ENV_SLOT_JSON`、`$BRAINAFK_ENV_BUNDLE_ROOT`、`$BRAINAFK_ARTIFACT_ROOT` 三个环境变量,缺一个就 `:?` 报错退出。
@@ -72,7 +74,7 @@ struct zhongjing_sec_vuln_req {
 };
 ```
 
-模块二进制在远端 `payloads.module_ko` 路径,可用 `ssh-exec.sh` 读取反汇编进一步分析。这里只描述环境暴露了什么;**漏洞怎么定位、poc 怎么利用由你完成**。
+模块二进制在远端 `payloads.module_ko` 路径,可用 `ssh-exec.sh` 读取反汇编进一步分析。这里只描述环境暴露了什么;**漏洞怎么定位、poc 怎么构造利用——都由你完成**。
 
 ## 4. 如何与远程环境交互
 
@@ -90,6 +92,7 @@ struct zhongjing_sec_vuln_req {
 
 - `ssh-exec.sh [slot.json] CMD...` — 在远端主机执行命令。
 - `ssh-copy-from.sh [slot.json] REMOTE_PATH LOCAL_PATH` — 从远端拉文件(只允许拉本 slot `work_dir` 下的路径)。
+- `ssh-copy-to.sh [slot.json] LOCAL_PATH` — 把本地文件推到本 slot 的 `poc_in/`,guest 开机时会作为 `/poc` 执行(可选)。
 
 ### 远端命令
 
@@ -110,5 +113,5 @@ struct zhongjing_sec_vuln_req {
 
 - verify 输出 `remote-verification=ok`
 - healthcheck 输出 `healthcheck=ok`
-- 完整 run 的串口日志包含 `module inserted` 和 `BUG: KASAN:`
+- 完整 run 的串口日志包含 `module inserted` 和 `guest ready`;若你注入的 `/poc` 触发崩溃,还会出现 `BUG: KASAN:`(那是你的结果,不是环境要求)
 - cleanup 输出 `rootfs_restored=yes`

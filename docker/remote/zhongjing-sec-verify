@@ -10,6 +10,9 @@ for command_name in qemu-system-aarch64 timeout tee flock sha256sum; do
   command -v "$command_name" >/dev/null || { echo "missing command: $command_name" >&2; exit 2; }
 done
 (cd "$shared_dir" && sha256sum --check --strict ASSET_SHA256SUMS)
-test -x "$shared_dir/payloads/poc"
+test -s "$shared_dir/payloads/vuln_misc.ko"
+qemu-system-aarch64 -device help 2>/dev/null | grep -q 'virtio-net-device' \
+  || { echo "missing qemu device: virtio-net-device" >&2; exit 2; }
 echo "remote-verification=ok"
 echo "slot_id=$slot_id"
+echo "poc_optional=yes"
