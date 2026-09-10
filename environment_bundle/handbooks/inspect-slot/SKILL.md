@@ -1,3 +1,8 @@
+---
+name: inspect-slot
+description: Inspect and validate the currently leased external Linux slot through SSH.
+---
+
 # Inspect Slot
 
 Use this skill before running the PoC. Inspect only the leased slot through SSH.

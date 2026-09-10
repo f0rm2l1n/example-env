@@ -1,3 +1,8 @@
+---
+name: linux-run-poc
+description: Run a static aarch64 PoC in the leased QEMU guest and capture its serial log.
+---
+
 # Linux Run POC (linux-run-poc)
 
 Use this skill after inspection. It boots the leased QEMU guest, injecting your

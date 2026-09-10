@@ -1,3 +1,8 @@
+---
+name: collect-evidence
+description: Retrieve the serial log after a full run and build the evidence index.
+---
+
 # Collect Evidence
 
 Use this skill after a full run to retrieve the serial log and build an evidence
