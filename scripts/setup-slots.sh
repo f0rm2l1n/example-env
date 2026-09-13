@@ -7,11 +7,13 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 inventory="$repo_root/slots/slots.jsonl"
 ssh_dir="$repo_root/artifacts/ssh"
+host_key_dir="$ssh_dir/host-keys"
 bundle_ssh_dir="$repo_root/environment_bundle/ssh"
 shared_dir="$repo_root/artifacts/shared"
 shared_runtime_dir="$shared_dir/runtime"
 shared_payloads_dir="$shared_dir/payloads"
 identity_file="$ssh_dir/id_ed25519"
+host_key_file="$host_key_dir/ssh_host_ed25519_key"
 known_hosts_file="$ssh_dir/known_hosts"
 public_host="${ZHONGJING_SEC_PUBLIC_HOST:-}"
 public_port="${ZHONGJING_SEC_PUBLIC_PORT:-2222}"
@@ -30,7 +32,7 @@ fi
 
 "$script_dir/check-deps.sh" >/dev/null
 "$script_dir/verify-artifacts.sh" >/dev/null
-mkdir -p "$ssh_dir" "$bundle_ssh_dir" "$repo_root/artifacts/slots" "$repo_root/slots" "$shared_runtime_dir" "$shared_payloads_dir"
+mkdir -p "$ssh_dir" "$host_key_dir" "$bundle_ssh_dir" "$repo_root/artifacts/slots" "$repo_root/slots" "$shared_runtime_dir" "$shared_payloads_dir"
 
 xz -dc "$repo_root/runtime/Image.xz" > "$shared_runtime_dir/Image.tmp"
 xz -dc "$repo_root/runtime/rootfs.cpio.xz" > "$shared_runtime_dir/rootfs.cpio.tmp"
@@ -45,8 +47,13 @@ chmod 0644 "$shared_payloads_dir/vuln_misc.ko"
 if [ ! -s "$identity_file" ]; then
   ssh-keygen -q -t ed25519 -N '' -C zhongjing-sec-external-linux-example -f "$identity_file"
 fi
+if [ ! -s "$host_key_file" ]; then
+  ssh-keygen -q -t ed25519 -N '' -C zhongjing-sec-external-linux-example-host -f "$host_key_file"
+fi
 ssh-keygen -y -f "$identity_file" | awk '{print $1" "$2}' > "$ssh_dir/authorized_keys"
 chmod 0600 "$identity_file" "$ssh_dir/authorized_keys"
+chmod 0600 "$host_key_file"
+chmod 0644 "$host_key_file.pub"
 cp "$identity_file" "$bundle_ssh_dir/id_ed25519"
 chmod 0600 "$bundle_ssh_dir/id_ed25519"
 

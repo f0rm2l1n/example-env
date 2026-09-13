@@ -23,8 +23,8 @@ RUN if [ -n "$DEBIAN_APT_MIRROR" ]; then \
     fi \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-       bash ca-certificates coreutils cpio grep jq openssh-server procps qemu-system-arm util-linux \
-       xz-utils \
+       bash binutils-aarch64-linux-gnu ca-certificates coreutils cpio file gcc-aarch64-linux-gnu \
+       grep jq libc6-dev-arm64-cross openssh-server procps qemu-system-arm util-linux xz-utils \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /srv/zhongjing-sec/home /srv/zhongjing-sec/slots \
     && useradd --home-dir /srv/zhongjing-sec/home --shell /bin/bash zhongjing-sec \
@@ -37,6 +37,7 @@ RUN chmod 0755 /usr/local/sbin/zhongjing-sec-entrypoint /usr/local/lib/zhongjing
          ln -s "/usr/local/lib/zhongjing-sec/zhongjing-sec-${command_name}" "/usr/local/bin/zhongjing-sec-${command_name}"; \
        done \
     && printf '%s\n' \
+       'HostKey /run/zhongjing-sec/host-keys/ssh_host_ed25519_key' \
        'PasswordAuthentication no' \
        'KbdInteractiveAuthentication no' \
        'PermitRootLogin no' \

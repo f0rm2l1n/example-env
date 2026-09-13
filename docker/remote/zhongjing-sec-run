@@ -19,7 +19,11 @@ trap 'rm -f "$pid_file"' EXIT
 qemu_initrd="$rootfs_cpio"
 poc_guest=""
 if [ -d "$poc_in_dir" ]; then
-  poc_file="$(find "$poc_in_dir" -maxdepth 1 -type f | head -n1)"
+  if [ -s "$poc_in_dir/poc" ]; then
+    poc_file="$poc_in_dir/poc"
+  else
+    poc_file="$(find "$poc_in_dir" -maxdepth 1 -type f | head -n1)"
+  fi
 fi
 if [ -n "${poc_file:-}" ] && [ -s "$poc_file" ]; then
   staged_poc="$(mktemp "$run_dir/.poc-only.XXXXXX.cpio")"

@@ -8,7 +8,7 @@ Docker 容器扮演远端 SSH 测试主机；容器内部提供两个独立 QEMU
 
 ```text
 runtime/             仓库内压缩保存的 guest kernel 与干净 rootfs 模板
-payloads/            预编译模块与 PoC；setup 会复制到远端共享目录
+payloads/            预编译漏洞模块；setup 会复制到远端共享目录
 src/                 payload 参考源码，不包含平台接入逻辑
 compose.yaml         单个 SSH 测试主机容器，并把 SSH 发布到宿主机端口
 docker/              SSH 主机镜像与容器内 slot 命令
@@ -53,6 +53,8 @@ ZHONGJING_SEC_BIND_HOST=0.0.0.0     # Docker 监听地址；需要跨机器访�
 ## Slot 模型
 
 `./scripts/setup-slots.sh` 一次完成：检查依赖、解压 runtime 到 `artifacts/shared/`、生成 SSH key、启动容器、创建两个 slot 工作区、写出 `slots/slots.jsonl`、打包前端上传文件。两个 slot 位于同一个 SSH 主机内：
+
+客户端登录 key 和服务端 host key 都保存在忽略提交的 `artifacts/ssh/` 中；重建容器会复用它们。
 
 | 内容 | slot 1 | slot 2 |
 | --- | --- | --- |

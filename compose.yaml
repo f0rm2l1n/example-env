@@ -19,4 +19,5 @@ services:
       - ./artifacts/shared:/srv/zhongjing-sec/shared:ro
       - ./artifacts/slots:/srv/zhongjing-sec/slots
       - ./artifacts/ssh/authorized_keys:/run/zhongjing-sec/input_authorized_keys:ro
+      - ./artifacts/ssh/host-keys:/run/zhongjing-sec/host-keys:ro
     restart: unless-stopped

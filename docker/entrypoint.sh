@@ -15,8 +15,8 @@ current_uid="$(id -u zhongjing-sec)"
 [ "$current_uid" = "$uid" ] || usermod --uid "$uid" --gid "$gid" zhongjing-sec
 
 test -s /run/zhongjing-sec/input_authorized_keys || { echo "missing SSH authorized key" >&2; exit 2; }
+test -s /run/zhongjing-sec/host-keys/ssh_host_ed25519_key || { echo "missing SSH host key" >&2; exit 2; }
 install -m 0600 -o zhongjing-sec -g zhongjing-sec /run/zhongjing-sec/input_authorized_keys /run/zhongjing-sec/authorized_keys
 mkdir -p /srv/zhongjing-sec/home /srv/zhongjing-sec/slots
 chown zhongjing-sec:zhongjing-sec /srv/zhongjing-sec/home /srv/zhongjing-sec/slots
-ssh-keygen -A
 exec /usr/sbin/sshd -D -e
